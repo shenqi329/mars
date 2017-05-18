@@ -376,6 +376,17 @@ static bool __openlogfile(const std::string& _log_dir) {
         __writetips2console("open file error:%d %s, path:%s", errno, strerror(errno), logfilepath);
     }
 
+    /*** add by liujunshi begin ***/
+    if (NULL != sg_logfile)
+    {
+        fseek (sg_logfile, 0, SEEK_END);
+        long log_file_len = ftell(sg_logfile);
+        if (log_file_len == 0){
+            uint8_t fileHead[14] = {0x1c,0xce,0x34,0x9e,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+            __writefile(fileHead,sizeof(fileHead),sg_logfile);
+        }
+    }
+    /***add by liujunshi end***/
 
     if (0 != s_last_time && (now_time - s_last_time) > (time_t)((now_tick - s_last_tick) / 1000 + 300)) {
 

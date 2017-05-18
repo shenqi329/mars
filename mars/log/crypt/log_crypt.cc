@@ -289,7 +289,11 @@ void LogCrypt::CryptSyncLog(const char* const _log_data, size_t _input_len, char
     uint16_t seq = __GetSeq(false);
     uint32_t len = std::min(_input_len, _output_len - GetHeaderLen() - GetTailerLen());
     
-    memcpy(_output + GetHeaderLen(), _log_data, len);
+    
+    for (uint32_t index = 0; index < len; index++) {
+        _output[GetHeaderLen() + index] = _log_data[index] ^ kCrpytKey[index%sizeof(kCrpytKey)];
+    }
+    
     _output[GetHeaderLen() + len] = kMagicEnd;
     _output[0] = kMagicSyncStart;
     
@@ -311,7 +315,9 @@ void LogCrypt::CryptSyncLog(const char* const _log_data, size_t _input_len, char
 
 void LogCrypt::CryptAsyncLog(const char* const _log_data, size_t _input_len, char* _output, size_t& _output_len) {
     _output_len = std::min(_input_len, _output_len);
-    memcpy(_output, _log_data, _output_len);
+    for (uint32_t index = 0; index < _output_len; index++) {
+        _output[index] = _log_data[index] ^ kCrpytKey[(index)%sizeof(kCrpytKey)];
+    }
 }
 
 bool LogCrypt::Fix(char* _data, size_t _data_len, bool& _is_async, uint32_t& _raw_log_len) {

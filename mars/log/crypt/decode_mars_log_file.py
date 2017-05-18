@@ -10,10 +10,12 @@ import struct
 MAGIC_NO_COMPRESS_START = 0x03;
 MAGIC_COMPRESS_START = 0x04;
 MAGIC_COMPRESS_START1 = 0x05;
-
 MAGIC_END  = 0x00;
-
 lastseq = 0;
+
+#static const char kCrpytKey[32] = {'7','2','7','d','f','z','c','z','c','g','n','c','j','1','9','0','s','u','5','b','1','r','l','3','v','l','7','e','4','m','a','d'};
+
+kCrpytKey = bytearray('727dfzczcgncj190su5b1rl3vl7e4mad'.encode())
 
 def IsGoodLogBuffer(_buffer, _offset, count):
 
@@ -68,7 +70,6 @@ def DecodeBuffer(_buffer, _offset, _outbuffer):
     length = struct.unpack_from("I", buffer(_buffer, _offset+headerLen-4-4, 4))[0]
     tmpbuffer = bytearray(length)
 
-
     seq=struct.unpack_from("H", buffer(_buffer, _offset+headerLen-4-4-2-2, 2))[0]
     begin_hour=struct.unpack_from("c", buffer(_buffer, _offset+headerLen-4-4-1-1, 1))[0]
     end_hour=struct.unpack_from("c", buffer(_buffer, _offset+headerLen-4-4-1, 1))[0]
@@ -86,7 +87,9 @@ def DecodeBuffer(_buffer, _offset, _outbuffer):
         decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
 
         if MAGIC_COMPRESS_START==_buffer[_offset]:
-	    tmpbuffer = decompressor.decompress(str(tmpbuffer))
+            for i in range(0,len(tmpbuffer)):
+                tmpbuffer[i] = tmpbuffer[i] ^ (kCrpytKey[i%32]);
+            tmpbuffer = decompressor.decompress(str(tmpbuffer))
 
 
         elif MAGIC_COMPRESS_START1==_buffer[_offset]:
@@ -97,11 +100,12 @@ def DecodeBuffer(_buffer, _offset, _outbuffer):
                 #decompress_data.extend(base64.decodestring(tmpbuffer[2:single_log_len+2]))
                 decompress_data.extend(tmpbuffer[2:single_log_len+2])
                 tmpbuffer[:] = tmpbuffer[single_log_len+2:len(tmpbuffer)]
-
-
-
+                for i in range(0,single_log_len):
+                    decompress_data[len(decompress_data) - single_log_len + i] = decompress_data[len(decompress_data) - single_log_len + i] ^ (kCrpytKey[i%32]);
             tmpbuffer = decompressor.decompress(str(decompress_data))
         else:
+            for i in range(0,len(tmpbuffer)):
+                tmpbuffer[i] = tmpbuffer[i] ^ (kCrpytKey[i%32]);
             pass
 
             # _outbuffer.extend('seq:%d, hour:%d-%d len:%d decompress:%d\n' %(seq, ord(begin_hour), ord(end_hour), length, len(tmpbuffer)))
@@ -119,6 +123,7 @@ def ParseFile(_file, _outfile):
     _buffer = bytearray(os.path.getsize(_file))
     fp.readinto(_buffer)
     fp.close()
+
     startpos = GetLogStartPos(_buffer, 2)
     if -1==startpos:
         return
